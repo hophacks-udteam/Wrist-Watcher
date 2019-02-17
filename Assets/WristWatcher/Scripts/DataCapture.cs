@@ -9,34 +9,52 @@ using Leap.Unity;
 
 public class DataCapture : MonoBehaviour
 {
+    private pythonConnector _connector;
     private List<string[]> rowData = new List<string[]>();
     public AudioSource badStuff;
     public CapsuleHand leftHand;
     public CapsuleHand rightHand;
-    [Range(0f,20f)]
+    [Range(0f, 20f)]
     public float tolerance = 15f;
-    [Range(85f,130f)]
+    [Range(85f, 130f)]
     public float target = 115f;
-    [Range(1f,10f)]
+    [Range(1f, 10f)]
     public float timeout = 2f;
 
-    
+    public bool useServer = false;
+
     private float angleL = 110f;
     private float angleR = 110f;
     private float leftLeft = 0;
     private float leftRight = 0;
     private float rightLeft = 0;
     private float rightRight = 0;
-    private float wrong = 0;
+    private float leftOrientation = 0;
+    private float rightOrientation = 0;
     private float lastErr = 0f;
     private bool Locked = false;
     private int bad = 0;
+
+    private HandFeature data = new HandFeature();
     string[] rowDataTemp = new string[8];
     private void Start()
     {
         lastErr = Time.time;
+        if (useServer)
+        {
+            _connector = new pythonConnector();
+            _connector.Start();
+        }
     }
-   
+
+
+    private void OnDestroy()
+    {
+        if (useServer)
+        {
+            _connector.Stop();
+        }
+    }
     // Update is called once per frame
     void Update()
     {
@@ -46,7 +64,7 @@ public class DataCapture : MonoBehaviour
 
         // Up/down should be no more than 15 deg
         // Check up down angle
-        if (leftHand.Handedness==Chirality.Left && leftHand.IsTracked && leftHand.GetLeapHand() != null)
+        if (leftHand.Handedness == Chirality.Left && leftHand.IsTracked && leftHand.GetLeapHand() != null)
         {
             //leftHand;
             Leap.Hand hand = leftHand.GetLeapHand();
@@ -62,7 +80,12 @@ public class DataCapture : MonoBehaviour
             Vector3 leftArmFrontLeft = wrist - right;
             leftLeft = Vector3.Distance(leftArmFrontRight, mockThumbBase);
             leftRight = Vector3.Distance(leftArmFrontLeft, thumbBase);
+
             
+            leftOrientation = Mathf.Abs(hand.Direction.Yaw - arm.Direction.Yaw);
+            
+
+
             // Get up/down 
             Vector3 leftPalmNorm = -hand.PalmNormal.ToVector3();
             Vector3 leftArm = hand.Arm.Direction.ToVector3();
@@ -88,19 +111,39 @@ public class DataCapture : MonoBehaviour
             Vector3 leftPalmNorm = -hand.PalmNormal.ToVector3();
             Vector3 leftArm = hand.Arm.Direction.ToVector3();
             angleR = Vector3.Angle(leftArm, leftPalmNorm);
+
+            rightOrientation = Mathf.Abs(hand.Direction.Yaw - arm.Direction.Yaw);
+            
         }
         if (Locked)
         {
             //Debug.Log(leftLeft + " " + leftRight + "::" + rightLeft+" " + rightRight);
-        }
-        
-        if (Locked && (Mathf.Abs(angleR-target) > tolerance || Mathf.Abs(angleL - target) > tolerance) && (Time.time - lastErr) >= timeout)
-        {
-            bad = 1;
-            //Debug.Log("Bad");
-            lastErr = Time.time;
-            if (badStuff != null)
-                badStuff.Play();
+
+            if (useServer)
+            {
+                // Connect to python server
+                _connector.sendData(angleL, angleR, leftLeft, leftRight, rightLeft, rightRight,leftOrientation,rightOrientation, Locked, bad);
+
+                bad = _connector.getData().bad;
+                if (bad ==1)
+                {
+                    lastErr = Time.time;
+                    if (badStuff != null)
+                        badStuff.Play();
+                }
+            }
+            else if ((Mathf.Abs(angleR - target) > tolerance || Mathf.Abs(angleL - target) > tolerance) && (Time.time - lastErr) >= timeout)
+            {
+                bad = 1;
+                //Debug.Log("Bad");
+                lastErr = Time.time;
+                if (badStuff != null)
+                    badStuff.Play();
+            }
+            else
+            {
+                bad = 0;
+            }
         }
         else
         {
@@ -121,11 +164,11 @@ public class DataCapture : MonoBehaviour
             sb.AppendLine(string.Join(delimiter, rowDataTemp[index]));
         string filePath = "C:\\Users\\Vinay\\Documents\\WristWatcher\\Assets\\WristWatcher\\test.csv";
         // Create a file to write to.
-        System.IO.File.AppendAllText(filePath,sb.ToString()+"\n");
+        System.IO.File.AppendAllText(filePath, sb.ToString() + "\n");
 
         //Debug.Log(filePath);
 
-    //Debug.Log("Left Angle:" + angleL + " Right Angle:" + angleR);
+        //Debug.Log("Left Angle:" + angleL + " Right Angle:" + angleR);
 
-}
+    }
 }
