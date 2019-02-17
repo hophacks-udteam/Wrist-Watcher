@@ -38,11 +38,14 @@ public class WordDisplay : MonoBehaviour {
 
 	private void Update()
 	{
-		transform.Translate(0f, -fallSpeed * Time.deltaTime, 0f);
-        if (transform.localPosition.y <= -350) 
+        if (GameObject.FindGameObjectWithTag("Player").GetComponent<DataCapture>().Locked)
         {
-            GameObject.FindGameObjectWithTag("GameController").GetComponent<WordManager>().failed(active);
-            Destroy(gameObject);
+            transform.Translate(0f, -fallSpeed * Time.deltaTime, 0f);
+            if (transform.localPosition.y <= -350)
+            {
+                GameObject.FindGameObjectWithTag("GameController").GetComponent<WordManager>().failed(active);
+                Destroy(gameObject);
+            }
         }
 	}
     

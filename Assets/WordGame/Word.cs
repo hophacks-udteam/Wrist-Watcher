@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -22,7 +23,15 @@ public class Word{
 
 	public char GetNextLetter ()
 	{
-		return word[typeIndex];
+        try
+        {
+            return word[typeIndex];
+        }
+        catch (IndexOutOfRangeException)
+        {
+            throw;
+        }
+		
 	}
 
 	public void TypeLetter ()

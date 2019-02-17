@@ -6,9 +6,11 @@ using System;
 using UnityEngine;
 using UnityEditor;
 using Leap.Unity;
+using System.Threading;
 
 public class DataCapture : MonoBehaviour
 {
+
     private pythonConnector _connector;
     private List<string[]> rowData = new List<string[]>();
     public AudioSource badStuff;
@@ -32,7 +34,7 @@ public class DataCapture : MonoBehaviour
     private float leftOrientation = 0;
     private float rightOrientation = 0;
     private float lastErr = 0f;
-    private bool Locked = false;
+    public bool Locked = false;
     private int badL = 0;
     private int badR = 0;
     private HandFeature data = new HandFeature();
@@ -43,6 +45,7 @@ public class DataCapture : MonoBehaviour
     public Gradient colorScale;
     private float leftScore = 0;
     private float rightScore = 0;
+    private bool sent = false;
     private void Start()
     {
         lastErr = Time.time;
@@ -133,11 +136,23 @@ public class DataCapture : MonoBehaviour
             badR = 0;
             if (useServer)
             {
-                // Connect to python server
-                _connector.sendData(angleL, angleR, leftLeft, leftRight, rightLeft, rightRight, leftOrientation, rightOrientation, Locked, badL, badR);
+                if (sent)
+                {
+                    HandFeature data = _connector.getData();
+                    if (data != null)
+                    {
+                        badL = data.badL;
+                        badR = data.badR;
+                        sent = false;
+                    }
+                    
+                }
+                else
+                {
+                    _connector.sendData(angleL, angleR, leftLeft, leftRight, rightLeft, rightRight, leftOrientation, rightOrientation, Locked, badL, badR);
+                    sent = true;
+                }
 
-                badL = _connector.getData().badL;
-                badR = _connector.getData().badR;
             }
             else
             {
@@ -154,8 +169,11 @@ public class DataCapture : MonoBehaviour
                     //Debug.Log("Bad");
                 }
             }
-            leftScore = Mathf.Min(100, leftScore + ((float)badL)/20);
-            rightScore = Mathf.Min(100, rightScore + ((float)badR) / 60);
+
+
+
+            leftScore = Mathf.Min(100, leftScore + ((float)badL) / 20);
+            rightScore = Mathf.Min(100, rightScore + ((float)badR) / 25);
             try
             {
                 leftHand.updateMatColor(colorScale.Evaluate(leftScore));
@@ -165,7 +183,7 @@ public class DataCapture : MonoBehaviour
             {
 
             }
-           
+
         }
         else
         {
@@ -211,7 +229,7 @@ public class DataCapture : MonoBehaviour
         // Create a file to write to.
         System.IO.File.AppendAllText(filePathL, sbL.ToString() + "\n");
         System.IO.File.AppendAllText(filePathR, sbR.ToString() + "\n");
-        
+
 
         //Debug.Log(filePath);
 

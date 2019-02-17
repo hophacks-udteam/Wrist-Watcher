@@ -13,7 +13,6 @@ public class WordManager : MonoBehaviour {
 	private Word activeWord;
     public void failed(bool active)
     {
-        Debug.Log(active);
         if (active)
         {
             hasActiveWord = false;
@@ -30,7 +29,7 @@ public class WordManager : MonoBehaviour {
 
 	public void TypeLetter (char letter)
 	{
-		if (hasActiveWord && activeWord!=null)
+		if (hasActiveWord && activeWord!=null && GameObject.FindGameObjectWithTag("Player").GetComponent<DataCapture>().Locked)
 		{
 			if (activeWord.GetNextLetter() == letter)
 			{
@@ -40,13 +39,22 @@ public class WordManager : MonoBehaviour {
 		{
 			foreach(Word word in words)
 			{
-				if (word.GetNextLetter() == letter)
-				{
-					activeWord = word;
-					hasActiveWord = true;
-					word.TypeLetter();
-					break;
-				}
+                try
+                {
+                    if (word.GetNextLetter() == letter)
+                    {
+                        activeWord = word;
+                        hasActiveWord = true;
+                        word.TypeLetter();
+                        break;
+                    }
+                }
+                catch (System.Exception)
+                {
+                    hasActiveWord = false;
+                    continue;
+                }
+				
 			}
 		}
 
