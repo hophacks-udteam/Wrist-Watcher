@@ -33,10 +33,16 @@ public class DataCapture : MonoBehaviour
     private float rightOrientation = 0;
     private float lastErr = 0f;
     private bool Locked = false;
-    private int bad = 0;
-
+    private int badL = 0;
+    private int badR = 0;
     private HandFeature data = new HandFeature();
-    string[] rowDataTemp = new string[8];
+    string[] rowDataLeft = new string[11];
+    string[] rowDataRight = new string[11];
+    public Material leftHandMat;
+    public Material rightHandMat;
+    public Gradient colorScale;
+    private float leftScore = 0;
+    private float rightScore = 0;
     private void Start()
     {
         lastErr = Time.time;
@@ -45,6 +51,8 @@ public class DataCapture : MonoBehaviour
             _connector = new pythonConnector();
             _connector.Start();
         }
+        leftHand.updateMatColor(Color.white);
+        rightHand.updateMatColor(Color.white);
     }
 
 
@@ -58,6 +66,9 @@ public class DataCapture : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        leftScore = Mathf.Max(0, leftScore - .016f);
+        rightScore = Mathf.Max(0, rightScore - .032f);
+
         // left right should be no more than 30 deg
         // Check if both hands are tracked
         Locked = leftHand.IsTracked && rightHand.IsTracked;
@@ -81,9 +92,9 @@ public class DataCapture : MonoBehaviour
             leftLeft = Vector3.Distance(leftArmFrontRight, mockThumbBase);
             leftRight = Vector3.Distance(leftArmFrontLeft, thumbBase);
 
-            
-            leftOrientation = Mathf.Abs(hand.Direction.Yaw - arm.Direction.Yaw);
-            
+
+            leftOrientation = Mathf.Rad2Deg * (hand.Direction.AngleTo(arm.Direction));
+
 
 
             // Get up/down 
@@ -112,59 +123,95 @@ public class DataCapture : MonoBehaviour
             Vector3 leftArm = hand.Arm.Direction.ToVector3();
             angleR = Vector3.Angle(leftArm, leftPalmNorm);
 
-            rightOrientation = Mathf.Abs(hand.Direction.Yaw - arm.Direction.Yaw);
-            
+            rightOrientation = Mathf.Rad2Deg * (hand.Direction.AngleTo(arm.Direction));
+
         }
         if (Locked)
         {
             //Debug.Log(leftLeft + " " + leftRight + "::" + rightLeft+" " + rightRight);
-
+            badL = 0;
+            badR = 0;
             if (useServer)
             {
                 // Connect to python server
-                _connector.sendData(angleL, angleR, leftLeft, leftRight, rightLeft, rightRight,leftOrientation,rightOrientation, Locked, bad);
+                _connector.sendData(angleL, angleR, leftLeft, leftRight, rightLeft, rightRight, leftOrientation, rightOrientation, Locked, badL, badR);
 
-                bad = _connector.getData().bad;
-                if (bad ==1)
+                badL = _connector.getData().badL;
+                badR = _connector.getData().badR;
+            }
+            else
+            {
+                if ((Mathf.Abs(angleL - target) > tolerance || (leftOrientation >= 35)))
                 {
-                    lastErr = Time.time;
-                    if (badStuff != null)
-                        badStuff.Play();
+                    //Debug.Log(leftOrientation + " " + rightOrientation + " bad");
+                    badL = 1;
+                    //Debug.Log("Bad");
+                }
+                if ((Mathf.Abs(angleR - target) > tolerance || (rightOrientation >= 35)))
+                {
+                    //Debug.Log(leftOrientation + " " + rightOrientation + " bad");
+                    badR = 1;
+                    //Debug.Log("Bad");
                 }
             }
-            else if ((Mathf.Abs(angleR - target) > tolerance || Mathf.Abs(angleL - target) > tolerance) && (Time.time - lastErr) >= timeout)
+            leftScore = Mathf.Min(100, leftScore + ((float)badL)/20);
+            rightScore = Mathf.Min(100, rightScore + ((float)badR) / 60);
+            try
             {
-                bad = 1;
-                //Debug.Log("Bad");
+                leftHand.updateMatColor(colorScale.Evaluate(leftScore));
+                rightHand.updateMatColor(colorScale.Evaluate(rightScore));
+            }
+            catch (MissingComponentException)
+            {
+
+            }
+           
+        }
+        else
+        {
+            badL = 0;
+            badR = 0;
+        }
+        if (badL == 1 || badR == 1)
+        {
+            // Some visual
+            if (Time.time - lastErr >= timeout)
+            {
                 lastErr = Time.time;
                 if (badStuff != null)
                     badStuff.Play();
             }
-            else
-            {
-                bad = 0;
-            }
         }
-        else
-        {
-            bad = 0;
-        }
-        rowDataTemp[0] = "" + angleL;
-        rowDataTemp[1] = "" + angleR;
-        rowDataTemp[2] = "" + leftLeft;
-        rowDataTemp[3] = "" + leftRight;
-        rowDataTemp[4] = "" + rightLeft;
-        rowDataTemp[5] = "" + rightRight;
-        rowDataTemp[6] = "" + bad;
-        rowDataTemp[7] = "" + Locked;
-        rowData.Add(rowDataTemp);
+        //Debug.Log(badL + " " + badR);
+        rowDataLeft[0] = "" + angleL;
+        rowDataLeft[1] = "" + leftLeft;
+        rowDataLeft[2] = "" + leftRight;
+        rowDataLeft[3] = "" + leftOrientation;
+        rowDataLeft[4] = "" + badL;
+        rowDataLeft[5] = "" + Locked;
+
+        rowDataRight[0] = "" + angleR;
+        rowDataRight[1] = "" + rightLeft;
+        rowDataRight[2] = "" + rightRight;
+        rowDataRight[3] = "" + rightOrientation;
+        rowDataRight[4] = "" + badR;
+        rowDataRight[5] = "" + Locked;
+
         string delimiter = ",";
-        StringBuilder sb = new StringBuilder();
-        for (int index = 0; index < rowDataTemp.Length; index++)
-            sb.AppendLine(string.Join(delimiter, rowDataTemp[index]));
-        string filePath = "C:\\Users\\Vinay\\Documents\\WristWatcher\\Assets\\WristWatcher\\test.csv";
+        StringBuilder sbL = new StringBuilder();
+        StringBuilder sbR = new StringBuilder();
+        for (int index = 0; index < rowDataLeft.Length; index++)
+        {
+            sbL.AppendLine(string.Join(delimiter, rowDataLeft[index]));
+            sbR.AppendLine(string.Join(delimiter, rowDataRight[index]));
+        }
+        string filePathL = "C:\\Users\\Vinay\\Documents\\WristWatcher\\Assets\\WristWatcher\\Left.csv";
+        string filePathR = "C:\\Users\\Vinay\\Documents\\WristWatcher\\Assets\\WristWatcher\\Right.csv";
+
         // Create a file to write to.
-        System.IO.File.AppendAllText(filePath, sb.ToString() + "\n");
+        System.IO.File.AppendAllText(filePathL, sbL.ToString() + "\n");
+        System.IO.File.AppendAllText(filePathR, sbR.ToString() + "\n");
+        
 
         //Debug.Log(filePath);
 

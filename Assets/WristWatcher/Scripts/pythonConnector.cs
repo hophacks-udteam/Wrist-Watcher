@@ -15,7 +15,7 @@ public class pythonConnector : RunAbleThread
 {
     private HandFeature data = new HandFeature();
     private bool sending = false;
-    public void sendData(float angleL, float angleR, float leftLeft, float leftRight, float rightLeft, float rightRight,float leftOrientation,float rightOrientation, bool Locked, int bad)
+    public void sendData(float angleL, float angleR, float leftLeft, float leftRight, float rightLeft, float rightRight,float leftOrientation,float rightOrientation, bool Locked, int badL, int badR)
     {
         if (!sending)
         {
@@ -28,7 +28,9 @@ public class pythonConnector : RunAbleThread
             data.leftOrientation = leftOrientation;
             data.rightOrientation = rightOrientation;
             data.Locked = Locked;
-            data.bad = bad;
+            data.badL = badL;
+            data.badR = badR;
+
             sending = true;
             Run();
         }

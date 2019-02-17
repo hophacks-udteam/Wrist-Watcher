@@ -1,0 +1,2 @@
+The framework for this game was taken from https://github.com/Brackeys/Falling-Words-Typing-Game
+Everything is free to use (see link)

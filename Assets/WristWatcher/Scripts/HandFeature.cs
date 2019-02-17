@@ -13,17 +13,18 @@ public class HandFeature
     public float leftOrientation = 0;
     public float rightOrientation = 0;
     public bool Locked = false;
-    public int bad = 0;
-    
+    public int badL = 0;
+    public int badR = 0;
+
     public override string ToString()
     {
-        return "" + angleL + "," + angleR + "," + leftLeft + "," + leftRight + "," + rightLeft + "," + rightRight + ","+ leftOrientation + "," + rightOrientation+","+(Locked==true?0:1)+"," + bad;
+        return "" + angleL + "," + angleR + "," + leftLeft + "," + leftRight + "," + rightLeft + "," + rightRight + ","+ leftOrientation + "," + rightOrientation+","+(Locked==true?0:1)+"," + badL+","+badR;
     }
     public void FromString(string str)
     {
         if (str != null)
         {
-            string[] data = new string[8];
+            string[] data = new string[11];
             data = str.Split(',');
             angleL = float.Parse(data[0]);
             angleR = float.Parse(data[1]);
@@ -33,7 +34,8 @@ public class HandFeature
             rightRight = float.Parse(data[5]);
             leftOrientation = float.Parse(data[6]);
             rightOrientation = float.Parse(data[7]);
-            bad = (int)float.Parse(data[8]);
+            badL = (int)float.Parse(data[9]);
+            badR = (int)float.Parse(data[10]);
         }
     }
 }

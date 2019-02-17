@@ -37,7 +37,7 @@ namespace Leap.Unity
         private bool _castShadows = true;
 
         [SerializeField]
-        private Material _material;
+        public Material _material;
 
         [SerializeField]
         private Mesh _sphereMesh;
@@ -93,7 +93,10 @@ namespace Leap.Unity
         {
             _hand = hand;
         }
-
+        public void updateMatColor(Color c)
+        {
+            _material.color = c;
+        }
         public override void InitHand()
         {
             if (_material != null)
